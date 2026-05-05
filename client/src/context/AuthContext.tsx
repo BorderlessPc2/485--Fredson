@@ -1,51 +1,54 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
-import { AuthUser, getMe } from '@/services/auth';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { AuthUser, getMe, logout } from '@/services/auth';
 
 interface AuthContextValue {
   user: AuthUser | null;
-  token: string | null;
   isLoading: boolean;
-  signIn: (token: string, user: AuthUser) => void;
-  signOut: () => void;
+  signIn: (user: AuthUser) => void;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
 
-    getMe()
-      .then(setUser)
-      .catch(() => {
-        localStorage.removeItem('token');
-        setToken(null);
-      })
-      .finally(() => setIsLoading(false));
-  }, [token]);
+      try {
+        const profile = await getMe();
+        setUser(profile);
+      } catch {
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    });
 
-  const signIn = useCallback((newToken: string, newUser: AuthUser) => {
-    localStorage.setItem('token', newToken);
-    setToken(newToken);
+    return unsubscribe;
+  }, []);
+
+  const signIn = useCallback((newUser: AuthUser) => {
     setUser(newUser);
   }, []);
 
-  const signOut = useCallback(() => {
-    localStorage.removeItem('token');
-    setToken(null);
+  const signOut = useCallback(async () => {
+    await logout();
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

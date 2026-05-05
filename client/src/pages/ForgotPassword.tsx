@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { AxiosError } from 'axios';
 import { Link } from 'react-router-dom';
-import { forgotPassword } from '@/services/auth';
+import { forgotPassword, getAuthErrorMessage } from '@/services/auth';
 
 const forgotSchema = z.object({
   email: z.string().email('Informe um e-mail válido'),
@@ -31,8 +30,7 @@ export default function ForgotPasswordPage() {
       setSuccessMessage(response.message);
       form.reset();
     } catch (err) {
-      const error = err as AxiosError<{ error: string }>;
-      setApiError(error.response?.data?.error ?? 'Não foi possível enviar a solicitação.');
+      setApiError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }

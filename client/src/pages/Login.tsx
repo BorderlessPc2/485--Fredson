@@ -4,8 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { login, register } from '@/services/auth';
-import { AxiosError } from 'axios';
+import { getAuthErrorMessage, login, register } from '@/services/auth';
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 function IconEye({ open }: { open: boolean }) {
@@ -98,11 +97,10 @@ export default function LoginPage() {
     setApiError('');
     try {
       const res = await login(data);
-      signIn(res.token, res.user);
+      signIn(res.user);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const e = err as AxiosError<{ error: string }>;
-      setApiError(e.response?.data?.error ?? 'Erro inesperado. Tente novamente.');
+      setApiError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -113,11 +111,10 @@ export default function LoginPage() {
     setApiError('');
     try {
       const res = await register(data);
-      signIn(res.token, res.user);
+      signIn(res.user);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const e = err as AxiosError<{ error: string }>;
-      setApiError(e.response?.data?.error ?? 'Erro inesperado. Tente novamente.');
+      setApiError(getAuthErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
